@@ -40,7 +40,7 @@
               预约看房
             </el-button>
             <el-button
-              v-if="auth.user?.role === '房东' && property.bookable"
+              v-if="isOwner && property.bookable"
               type="danger"
               plain
               :loading="delistPending"
@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { createBooking, delistProperty, getProperty, setFavorite } from '../api/client';
 import { auth } from '../stores/auth';
@@ -74,6 +74,9 @@ const slot = ref(slots[0]);
 const favoritePending = ref(false);
 const bookingPending = ref(false);
 const delistPending = ref(false);
+const isOwner = computed(
+  () => auth.user?.role === '房东' && property.value?.landlordId === auth.user.id,
+);
 
 onMounted(async () => {
   try {

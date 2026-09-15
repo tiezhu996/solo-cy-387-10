@@ -5,8 +5,9 @@ from .models import Property
 
 
 class PropertySerializer(serializers.ModelSerializer):
-    """列表/详情通用序列化，附带当前用户的收藏状态与收藏总数。"""
+    """列表/详情通用序列化，附带归属、当前用户收藏状态与收藏总数。"""
 
+    landlordId = serializers.IntegerField(source='landlord_id', read_only=True)
     landlordPhone = serializers.CharField(source='landlord_phone')
     favoriteCount = serializers.SerializerMethodField()
     favorited = serializers.SerializerMethodField()
@@ -15,7 +16,7 @@ class PropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
         fields = [
-            'id', 'community', 'region', 'layout', 'area', 'rent', 'deposit', 'payment',
+            'id', 'landlordId', 'community', 'region', 'layout', 'area', 'rent', 'deposit', 'payment',
             'facilities', 'description', 'photos', 'status', 'landlordPhone',
             'favoriteCount', 'favorited', 'bookable',
         ]
@@ -31,3 +32,16 @@ class PropertySerializer(serializers.ModelSerializer):
 
     def get_bookable(self, obj) -> bool:
         return obj.status != STATUS_OFFLINE
+
+
+class PropertyCreateSerializer(serializers.ModelSerializer):
+    """发布房源：归属由视图强制设为当前登录房东，不接受客户端传入。"""
+
+    landlordPhone = serializers.CharField(source='landlord_phone')
+
+    class Meta:
+        model = Property
+        fields = [
+            'community', 'region', 'layout', 'area', 'rent', 'deposit', 'payment',
+            'facilities', 'description', 'photos', 'landlordPhone',
+        ]

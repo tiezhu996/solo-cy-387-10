@@ -1,5 +1,6 @@
 export interface PropertyItem {
   id: number;
+  landlordId: number;
   community: string;
   region: string;
   layout: string;

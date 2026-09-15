@@ -1,9 +1,15 @@
+from django.conf import settings
 from django.db import models
 
 from app.constants.enums import HOUSE_STATUS
 
 
 class Property(models.Model):
+    landlord = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='properties',
+    )
     community = models.CharField(max_length=80)
     region = models.CharField(max_length=40)
     layout = models.CharField(max_length=20)

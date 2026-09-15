@@ -1,4 +1,4 @@
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { createBooking, delistProperty, getProperty, setFavorite } from '../api/client';
 import { auth } from '../stores/auth';
@@ -12,6 +12,7 @@ const slot = ref(slots[0]);
 const favoritePending = ref(false);
 const bookingPending = ref(false);
 const delistPending = ref(false);
+const isOwner = computed(() => auth.user?.role === '房东' && property.value?.landlordId === auth.user.id);
 onMounted(async () => {
     try {
         property.value = await getProperty(Number(props.id));
@@ -291,7 +292,7 @@ if (__VLS_ctx.property) {
     };
     __VLS_47.slots.default;
     var __VLS_47;
-    if (__VLS_ctx.auth.user?.role === '房东' && __VLS_ctx.property.bookable) {
+    if (__VLS_ctx.isOwner && __VLS_ctx.property.bookable) {
         const __VLS_52 = {}.ElButton;
         /** @type {[typeof __VLS_components.ElButton, typeof __VLS_components.elButton, typeof __VLS_components.ElButton, typeof __VLS_components.elButton, ]} */ ;
         // @ts-ignore
@@ -339,7 +340,6 @@ var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
-            auth: auth,
             router: router,
             property: property,
             error: error,
@@ -349,6 +349,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             favoritePending: favoritePending,
             bookingPending: bookingPending,
             delistPending: delistPending,
+            isOwner: isOwner,
             toggleFavorite: toggleFavorite,
             book: book,
             delist: delist,
