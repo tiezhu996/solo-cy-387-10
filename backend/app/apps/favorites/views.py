@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Count, Q
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,9 +20,19 @@ class FavoriteListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # select_related 取房源、注解批量算收藏统计，整条查询固定为一次，
+        # 避免序列化每套房源时再逐条查收藏数和收藏状态。
         favorites = (
             Favorite.objects.filter(user=request.user)
             .select_related('property')
+            .annotate(
+                property_favorite_count=Count('property__favorited_by', distinct=True),
+                property_viewer_favorite_count=Count(
+                    'property__favorited_by',
+                    filter=Q(property__favorited_by__user=request.user),
+                    distinct=True,
+                ),
+            )
             .order_by('-created_at', '-id')
         )
         serializer = FavoriteSerializer(favorites, many=True, context={'request': request})

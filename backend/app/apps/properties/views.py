@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -15,6 +16,19 @@ logger = get_logger('properties')
 def _is_landlord(user) -> bool:
     profile = getattr(user, 'profile', None)
     return profile is not None and profile.role == ROLE_LANDLORD
+
+
+def with_favorite_stats(queryset, user):
+    """批量注解收藏总数与当前用户收藏状态，避免序列化时逐条查询（N+1）。
+
+    无论列表多长，收藏统计都合并进主查询一次完成，查询次数与条数无关。
+    """
+    queryset = queryset.annotate(favorite_count=Count('favorited_by', distinct=True))
+    if user.is_authenticated:
+        queryset = queryset.annotate(
+            viewer_favorite_count=Count('favorited_by', filter=Q(favorited_by__user=user), distinct=True),
+        )
+    return queryset
 
 
 class PropertyListView(APIView):
@@ -36,6 +50,7 @@ class PropertyListView(APIView):
             queryset = queryset.filter(layout=layout)
         if max_rent and max_rent.isdigit():
             queryset = queryset.filter(rent__lte=int(max_rent))
+        queryset = with_favorite_stats(queryset, request.user)
         serializer = PropertySerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -59,7 +74,7 @@ class PropertyDetailView(APIView):
 
     def get(self, request, property_id: int):
         try:
-            prop = Property.objects.get(id=property_id)
+            prop = with_favorite_stats(Property.objects.all(), request.user).get(id=property_id)
         except Property.DoesNotExist:
             raise not_found()
         serializer = PropertySerializer(prop, context={'request': request})
