@@ -22,6 +22,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = ['django.middleware.common.CommonMiddleware', 'app.middleware.request_log.RequestLogMiddleware']
 ROOT_URLCONF = 'app.urls'
 DATABASES = {'default': dj_database_url.config(default=os.getenv('DATABASE_URL', 'sqlite:///db.sqlite3'))}
+if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    # 并发读写时等待锁释放而不是立即报 database is locked（仅影响 sqlite）
+    DATABASES['default']['OPTIONS'] = {'timeout': 30}
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'

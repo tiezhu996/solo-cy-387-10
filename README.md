@@ -45,6 +45,16 @@ cd backend && python -m venv venv && source venv/bin/activate && pip install -r 
 cd frontend && npm install && npm run dev
 ```
 
+## 测试
+
+并发竞争集成测试（真实 HTTP 请求 + 真实数据库，独立测试库，自动搭建与清理）：
+
+```bash
+cd backend && python tests/race_test.py
+```
+
+测试结构：账号 A 的写线程对多套房源反复收藏/取消，账号 A 与账号 B 两个读线程同时持续读取房源列表与收藏夹；对每次响应断言收藏总数、个人收藏状态与最终收藏关系，失败时输出读取阶段、账号与可见结果。默认使用临时 sqlite（WAL），可通过 `RACE_DATABASE_URL=postgres://...` 对 PostgreSQL 运行。
+
 ## 技术栈
 
 | 模块 | 技术 |
