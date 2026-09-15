@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     'app.apps.booking',
     'app.apps.contract',
     'app.apps.repair',
+    'app.apps.favorites',
 ]
 
 MIDDLEWARE = ['django.middleware.common.CommonMiddleware', 'app.middleware.request_log.RequestLogMiddleware']
@@ -24,7 +25,13 @@ DATABASES = {'default': dj_database_url.config(default=os.getenv('DATABASE_URL',
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
-REST_FRAMEWORK = {'EXCEPTION_HANDLER': 'app.utils.exception_handler.standard_exception_handler'}
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'app.utils.exception_handler.standard_exception_handler',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+SIMPLE_JWT = {'USER_ID_FIELD': 'id', 'USER_ID_CLAIM': 'user_id'}
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

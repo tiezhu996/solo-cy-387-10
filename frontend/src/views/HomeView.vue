@@ -20,9 +20,19 @@
     </section>
 
     <section v-if="mode === '地图视图'" class="map-panel">高德地图区域：按经纬度展示房源点位，当前示例加载 {{ filtered.length }} 套房源。</section>
+    <p v-if="loadError" class="error">{{ loadError }}</p>
     <section class="grid">
-      <PropertyCard v-for="item in filtered" :key="item.id" :item="item" />
+      <PropertyCard
+        v-for="item in filtered"
+        :key="item.id"
+        :item="item"
+        :favorite-pending="favoritePendingId === item.id"
+        @view="(id) => router.push(`/properties/${id}`)"
+        @toggle-favorite="toggleFavorite"
+        @book="book"
+      />
     </section>
+    <p v-if="notice" class="notice">{{ notice }}</p>
 
     <section class="repair">
       <h2>物业报修</h2>
@@ -35,17 +45,20 @@
       </el-select>
       <el-input v-model="description" placeholder="描述故障情况" />
       <el-button type="success" @click="submitRepair">提交工单</el-button>
-      <span>{{ notice }}</span>
+      <span>{{ repairNotice }}</span>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import PropertyCard from '../components/PropertyCard.vue';
-import { createRepair, getProperties } from '../api/client';
+import { createBooking, createRepair, getProperties, setFavorite } from '../api/client';
+import { auth } from '../stores/auth';
 import type { PropertyItem } from '../types/domain';
 
+const router = useRouter();
 const properties = ref<PropertyItem[]>([]);
 const mode = ref('列表视图');
 const region = ref('');
@@ -53,10 +66,17 @@ const maxRent = ref(7000);
 const layout = ref('全部');
 const faultType = ref('水电');
 const description = ref('');
-const notice = ref('等待提交');
+const repairNotice = ref('等待提交');
+const notice = ref('');
+const loadError = ref('');
+const favoritePendingId = ref<number | null>(null);
 
 onMounted(async () => {
-  properties.value = await getProperties();
+  try {
+    properties.value = await getProperties();
+  } catch {
+    loadError.value = '房源加载失败，请稍后重试';
+  }
 });
 
 const filtered = computed(() => properties.value.filter((item) => {
@@ -66,8 +86,38 @@ const filtered = computed(() => properties.value.filter((item) => {
   return hitRegion && hitRent && hitLayout;
 }));
 
+function requireLogin(): boolean {
+  if (auth.token) return true;
+  router.push({ name: 'login', query: { redirect: '/' } });
+  return false;
+}
+
+async function toggleFavorite(item: PropertyItem) {
+  if (favoritePendingId.value !== null || !requireLogin()) return;
+  favoritePendingId.value = item.id;
+  try {
+    const state = await setFavorite(item.id, !item.favorited);
+    item.favorited = state.favorited;
+    item.favoriteCount = state.favoriteCount;
+  } catch (err) {
+    notice.value = err instanceof Error ? err.message : '收藏操作失败';
+  } finally {
+    favoritePendingId.value = null;
+  }
+}
+
+async function book(item: PropertyItem) {
+  if (!item.bookable) return;
+  try {
+    const booking = await createBooking(item.id, '周六 10:00');
+    notice.value = `预约成功：${item.community} ${booking.slot}，状态 ${booking.status}`;
+  } catch (err) {
+    notice.value = err instanceof Error ? err.message : '预约失败';
+  }
+}
+
 async function submitRepair() {
   const ticket = await createRepair({ faultType: faultType.value, description: description.value });
-  notice.value = `工单 ${ticket.id} 已提交：${ticket.status}`;
+  repairNotice.value = `工单 ${ticket.id} 已提交：${ticket.status}`;
 }
 </script>
